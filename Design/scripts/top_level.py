@@ -28,9 +28,9 @@ def print_verilog_tl(module_name,pin_name,pin_dir,pin_width):
         f.write("module " + module_name + " ("+','.join(pin_name)+");\n\n")
         for (pin,direction,width) in zip(pin_name,pin_dir,pin_width):
             if((width==1.0) & (direction == "IN")):
-                f.write("input %s;\n" %(pin))
+                f.write("input  %s;\n" %(pin))
             elif ((width!=1.0) & (direction == "IN")):
-                f.write("input [%d:0] %s;\n" %(width-1,pin))
+                f.write("input  [%d:0] %s;\n" %(width-1,pin))
             elif ((width==1.0) & (direction == "OUT")):
                 f.write("output %s;\n" %(pin))
             elif ((width!=1.0) & (direction == "OUT")):
@@ -72,13 +72,33 @@ def print_verilog_hier(wrapper_file,instance_name,module_name,Pins,Conn):
     i = 1
     file_name = "../TL_Wrapper/%s.v" % wrapper_file
     with open (file_name,"a") as f:
-        f.write(instance_name + " " + module_name + " (\n")
+        f.write("\n" + instance_name + " " + module_name + " (\n")
         for (pin,conn) in zip(Pins,Conn):
             if(conn_count == i):
                 f.write("."+pin+"("+conn+")"+"\n);\n\n")
             else:
                 f.write("."+pin+"("+conn+"),\n")
             i = i+1
+
+def create_wires(wrapper_file,TL_Pins,Width,Conn):
+    file_name = "../TL_Wrapper/%s.v" % wrapper_file
+    with open (file_name,"r+") as f:
+        loglist = f.readlines()
+        for (width,conn) in zip(Width,Conn):
+            if(conn in TL_Pins):
+                pass
+            elif(width==1):
+                line = "wire %s;\n" %(conn)
+                if (line in loglist):
+                    pass
+                else:
+                    f.write("wire %s;\n" %(conn))
+            else:
+                line = "wire [%d:0] %s;\n" %(width-1,conn)
+                if (line in loglist):
+                    pass
+                else:
+                    f.write("wire [%d:0] %s;\n" %(width-1,conn))
 
 def print_eof(wrapper_file):
     file_name = "../TL_Wrapper/%s.v" % wrapper_file
@@ -94,9 +114,13 @@ def main():
     all_modules=get_modules_list(TL_Excel_Sheet)
     for i in range(len(all_modules)):
         hier=get_hier(TL_Excel_Sheet,i+1)
+        create_wires(tl_name,var[1],hier[3],hier[4])
+    for i in range(len(all_modules)):
+        hier=get_hier(TL_Excel_Sheet,i+1)
         sub_module = all_modules[i]
         inst_name = ''.join(hier[0])
         print_verilog_hier(tl_name,inst_name,sub_module,hier[1],hier[4])
     print_eof(tl_name)
+
 
 main()
