@@ -2,6 +2,7 @@
 
 import pandas as pd
 import sys
+import getopt
 import os
 from os import path
 
@@ -105,7 +106,7 @@ def print_eof(wrapper_file):
     with open (file_name,"a") as f:
         f.write("\nendmodule")
 
-def main():
+def generate_wrapper():
     prepare_working_area()
     TL_Excel_Sheet = "../TL_Sheet/toplevel.xlsx"
     var = open_tl_sheet(TL_Excel_Sheet)
@@ -122,5 +123,61 @@ def main():
         print_verilog_hier(tl_name,inst_name,sub_module,hier[1],hier[4])
     print_eof(tl_name)
 
+def excel2csv(file_loc):
+    if(path.exists("../CSVs")):
+        pass
+    else:
+        os.mkdir("../CSVs")
+    df = pd.read_excel(file_loc, sheet_name=None)
+    for key in df.keys():
+        df[key].to_csv('../CSVs/%s.csv' %key,index=False)
 
-main()
+def csv2excel():
+    writer = pd.ExcelWriter('../TL_Sheet/toplevel.xlsx')
+    CSVs = os.listdir("../CSVs")
+    csv_dir  = "../CSVs/"
+    CSVs_dir = [csv_dir + s for s in CSVs]
+    for csvfilename,csvfiledir in zip(CSVs,CSVs_dir):
+        df = pd.read_csv(csvfiledir)
+        df.to_excel(writer,sheet_name=os.path.splitext(csvfilename)[0],index=False)
+        writer.save()
+
+def user_manual():
+    print("Script Help")
+    print ("\ttop_level.py -c - Used to generate CSV from Excel Sheet")
+    print ("\ttop_level.py -c - Used to generate Excel Sheet from CSV")
+    print ("\ttop_level.py -w - Used to generate Top Level Wrapper")
+    sys.exit(2)
+
+def main(argv):
+    code_func = ""
+    if (len(sys.argv) == 1):
+        print("No Arguments Passed - Exiting")
+        user_manual()
+    elif (len(sys.argv) > 3):
+        print("Extra Arguments Passed - Exiting")
+        user_manual()
+    try:
+        opts, args = getopt.getopt(argv,"hf:",["function="])
+    except getopt.GetoptError:
+        print("Incorrect Parameters Passed - Exiting")
+        user_manual()
+        sys.exit(2)
+    for opt, arg in opts:
+        if opt == '-h':
+            user_manual()
+            sys.exit()
+        elif opt in ("-f", "--function"):
+            code_func = arg
+            if (code_func == "wrapper"):
+                generate_wrapper()
+                print("Top Level Wrapper Generated")
+            elif (code_func == "csv2excel"):
+                csv2excel()
+                print("Excel Sheet Generated")
+            elif (code_func == "excel2csv"):
+                excel2csv("../TL_Sheet/toplevel.xlsx")
+                print("CSV Files Generated")
+
+if __name__ == "__main__":
+    main(sys.argv[1:])
